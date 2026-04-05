@@ -1,0 +1,451 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 mb-4 mb-md-0">
+            <div class="dashboard-sidebar">
+                <h5 class="px-4 mb-4 fw-bold text-muted text-uppercase" style="font-size: 0.85rem; letter-spacing: 1px;">Analysis Tools</h5>
+                <nav class="nav flex-column nav-pills" id="dashboardTabs" role="tablist">
+                    <a class="sidebar-link text-start {% if active_tab == 'file' or active_tab == 'dashboard' or not active_tab %}active{% endif %} rounded-0 border-0 bg-transparent" href="?tab=file" role="tab">
+                        <i class="bi bi-file-earmark-arrow-up me-2"></i> File Analysis
+                    </a>
+                    <a class="sidebar-link text-start {% if active_tab == 'url' %}active{% endif %} rounded-0 border-0 bg-transparent" href="?tab=url" role="tab">
+                        <i class="bi bi-globe me-2"></i> URL Scanner
+                    </a>
+                    <a class="sidebar-link text-start {% if active_tab == 'image' %}active{% endif %} rounded-0 border-0 bg-transparent" href="?tab=image" role="tab">
+                        <i class="bi bi-image me-2"></i> Steganography
+                    </a>
+                    <a class="sidebar-link text-start {% if active_tab == 'history' %}active{% endif %} rounded-0 border-0 bg-transparent" href="?tab=history" role="tab">
+                        <i class="bi bi-clock-history me-2"></i> Scan History
+                    </a>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-10">
+            <!-- Global Results Template (If any results returned from POST; visible only on matching tab) -->
+            {% if show_result and results and results.type == active_tab and active_tab != 'history' %}
+                <div class="sam-card mb-4" id="result-section" style="border-top: 5px solid {% if results.risk == 'High' %}var(--danger){% elif results.risk == 'Medium' %}var(--warning){% else %}var(--success){% endif %};">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <div>
+                                <h4 class="mb-0 fw-bold"><i class="bi bi-clipboard-data me-2"></i> Analysis Results</h4>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <span class="badge-risk risk-{{ results.risk }} shadow-sm">
+                                    {% if results.risk == 'High' %}<i class="bi bi-exclamation-triangle-fill me-1"></i>{% endif %}
+                                    Risk Level: {{ results.risk }}
+                                </span>
+                                {% if results.confidence %}
+                                <span class="badge bg-info text-white shadow-sm">
+                                    Confidence: {{ results.confidence }}%
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Enhanced Risk Analysis Reasoning -->
+                        {% if results.reasoning %}
+                        <div class="alert {% if results.forced_malicious %}alert-danger{% else %}alert-info{% endif %} alert-dismissible fade show mb-4" role="alert">
+                            <h6 class="alert-heading fw-bold">
+                                {% if results.forced_malicious %}
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>⚠️ Threat Detection Summary
+                                {% else %}
+                                    <i class="bi bi-info-circle-fill me-2"></i>Analysis Details
+                                {% endif %}
+                            </h6>
+                            <ul class="mb-0 ps-3">
+                                {% for reason in results.reasoning %}
+                                    <li class="small {% if '🚨' in reason %}fw-bold text-danger{% endif %}">{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% if results.forced_malicious %}
+                                <hr class="my-2">
+                                <p class="mb-0 small"><strong>Detection Result:</strong> File flagged as malicious due to suspicious behavior patterns detected in static analysis.</p>
+                            {% endif %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+
+                        {% if results.type == 'file' %}
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">File Information</h5>
+                                    <table class="table table-sm borderless result-table">
+                                        <tbody>
+                                            <tr><th>Filename</th><td>{{ results.data.metadata.filename }}</td></tr>
+                                        <tr><th>Created by</th><td>{% if results.created_by %}{{ results.created_by.username }}{% else %}SAM Tool{% endif %}</td></tr>
+                                            <tr><th>Type</th><td>{{ results.data.metadata.mime_type }} ({{ results.data.metadata.extension|upper }})</td></tr>
+                                            <tr><th>Size</th><td>{{ results.data.metadata.size_bytes }} bytes</td></tr>
+                                            <tr><th>Created</th><td>{{ results.data.metadata.created }}</td></tr>
+                                            <tr><th>SHA-256</th><td class="text-break font-monospace small" style="color: var(--light-blue);">{{ results.data.hash }}</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Analysis Findings</h5>
+                                    <ul class="list-group list-group-flush mb-3">
+                                        {% if results.data.flags %}
+                                            {% for flag in results.data.flags %}
+                                                <li class="list-group-item bg-transparent px-0 py-1 d-flex align-items-start">
+                                                    <i class="bi bi-asterisk text-{{ results.risk|lower|default:'primary' }} me-2 mt-1" style="font-size: 0.7rem;"></i> {{ flag }}
+                                                </li>
+                                            {% endfor %}
+                                        {% else %}
+                                            <li class="list-group-item bg-transparent px-0 text-success">No threat flags detected.</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                
+                                {% if results.data.pe_info.is_pe %}
+                                <div class="col-12 mt-4">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">PE Information (Executable)</h5>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="p-3 bg-light rounded text-center h-100">
+                                                <h6 class="text-muted text-uppercase small mb-2">Entropy Level</h6>
+                                                <h3 class="fw-bold mb-0 {% if results.data.pe_info.entropy > 7.0 %}text-danger{% else %}text-info{% endif %}">{{ results.data.pe_info.entropy }}</h3>
+                                                <small class="text-muted">{% if results.data.pe_info.entropy > 7.0%}Packed/Encrypted{% else %}Normal{% endif %}</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="p-3 bg-light rounded h-100">
+                                                <h6 class="text-muted text-uppercase small mb-2">Suspicious API Imports</h6>
+                                                {% if results.data.pe_info.suspicious_apis_found %}
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                    {% for api in results.data.pe_info.suspicious_apis_found %}
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">{{ api }}</span>
+                                                    {% endfor %}
+                                                    </div>
+                                                {% else %}
+                                                    <p class="mb-0 text-success small"><i class="bi bi-check-circle me-1"></i>None detected</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="col-12 mt-4">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Extracted Strings Sample</h5>
+                                    <pre class="code-block mb-0">{% for s in results.data.strings %}{{ s }}
+{% empty %}No printable strings extracted.{% endfor %}</pre>
+                                </div>
+                            </div>
+                            
+                            <!-- AI Detection Card -->
+                            <div class="sam-card mt-4" style="border-left: 5px solid {% if results.ml_result == 'Malicious' %}var(--danger){% else %}var(--success){% endif %};">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-3"><i class="bi bi-robot me-2"></i>🤖 AI-Powered Detection</h5>
+                                    {% if results.forced_malicious %}
+                                    <div class="alert alert-warning mb-3" role="alert">
+                                        <small><strong>⚠️ Static Analysis Override:</strong> ML prediction was overridden due to suspicious behavior patterns.</small>
+                                    </div>
+                                    {% endif %}
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <div class="p-3 bg-light rounded text-center">
+                                                <h6 class="text-muted text-uppercase small mb-2">ML Prediction</h6>
+                                                <h4 class="fw-bold mb-0 {% if results.ml_result == 'Malicious' %}text-danger{% else %}text-success{% endif %}">{{ results.ml_result }}</h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 bg-light rounded text-center">
+                                                <h6 class="text-muted text-uppercase small mb-2">Confidence</h6>
+                                                <h4 class="fw-bold mb-0 text-info">{{ results.confidence }}%</h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 bg-light rounded text-center">
+                                                <h6 class="text-muted text-uppercase small mb-2">Final Score</h6>
+                                                <h4 class="fw-bold mb-0 {% if results.final_score >= 70 %}text-danger{% elif results.final_score >= 40 %}text-warning{% else %}text-success{% endif %}">{{ results.final_score }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        {% elif results.type == 'url' %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">URL Information</h5>
+                                    <table class="table table-sm borderless result-table">
+                                        <tbody>
+                                            <tr><th>Target URL</th><td class="text-break"><a href="{{ results.data.url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">{{ results.data.url }}</a></td></tr>
+                                            <tr><th>Domain</th><td>{{ results.data.domain }}</td></tr>
+                                            <tr><th>Resolved IP</th><td><span class="badge bg-secondary">{{ results.data.ip_address }}</span></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Suspicious Indicators</h5>
+                                    <ul class="list-group list-group-flush">
+                                        {% if results.data.flags %}
+                                            {% for flag in results.data.flags %}
+                                                <li class="list-group-item bg-transparent px-0 py-2 d-flex align-items-center">
+                                                    <i class="bi bi-exclamation-circle text-warning me-2"></i> {{ flag }}
+                                                </li>
+                                            {% endfor %}
+                                        {% else %}
+                                            <li class="list-group-item bg-transparent px-0 text-success"><i class="bi bi-shield-check me-2"></i>URL appears clean based on static patterns.</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- What Happens When Opened -->
+                            {% if results.data.consequences %}
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="sam-card {% if results.data.is_ransomware %}border-danger bg-danger bg-opacity-10{% else %}border-danger{% endif %}" style="border-left: 5px solid var(--danger);">
+                                        <div class="card-body p-4">
+                                            {% if results.data.is_ransomware %}
+                                            <h5 class="fw-bold mb-3 text-danger">
+                                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                                🚨 RANSOMWARE DETECTED - EXTREME DANGER!
+                                            </h5>
+                                            <div class="alert alert-danger mb-3">
+                                                <strong>THREAT TYPE:</strong> {{ results.data.threat_type }}
+                                            </div>
+                                            {% else %}
+                                            <h5 class="fw-bold mb-3 text-danger">
+                                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                                ⚠️ What Happens If You Open This Link?
+                                            </h5>
+                                            {% endif %}
+                                            <ul class="mb-0">
+                                                {% for consequence in results.data.consequences %}
+                                                    <li class="small {% if 'RANSOMWARE' in consequence or 'ENCRYPTION' in consequence or 'RANSOM' in consequence %}fw-bold text-danger{% endif %}">{{ consequence }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% if results.data.real_destination and results.data.real_destination != results.data.domain %}
+                                            <div class="mt-3 p-3 bg-light rounded">
+                                                <strong>Real Destination:</strong> 
+                                                <code class="text-danger">{{ results.data.real_destination }}</code>
+                                                <small class="text-muted d-block mt-1">
+                                                    (The browser ignores everything before the @ symbol)
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                            {% if results.data.is_ransomware %}
+                                            <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                                                <h6 class="fw-bold text-warning mb-2">🛡️ IMMEDIATE PROTECTION STEPS:</h6>
+                                                <ul class="mb-0 small">
+                                                    <li>Do NOT download or open any files from this link</li>
+                                                    <li>Ensure your antivirus is updated and running</li>
+                                                    <li>Backup important files regularly to external drives</li>
+                                                    <li>Use strong, unique passwords for all accounts</li>
+                                                    <li>Enable two-factor authentication wherever possible</li>
+                                                </ul>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                        {% elif results.type == 'image' %}
+                             <div class="row">
+                                <div class="col-md-6">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Image Metadata</h5>
+                                    <table class="table table-sm borderless result-table">
+                                        <tbody>
+                                            <tr><th>Format</th><td>{{ results.data.format }}</td></tr>
+                                            <tr><th>Mode</th><td>{{ results.data.mode }}</td></tr>
+                                            <tr><th>Dimensions</th><td>{{ results.data.size|join:" x " }} px</td></tr>
+                                            <tr><th>Overall Entropy</th><td>{{ results.data.entropy }}</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Steganography Checks</h5>
+                                    <ul class="list-group list-group-flush">
+                                        {% if results.data.flags %}
+                                            {% for flag in results.data.flags %}
+                                                <li class="list-group-item bg-transparent px-0 py-2 d-flex align-items-center">
+                                                    <i class="bi bi-bug text-danger me-2"></i> {{ flag }}
+                                                </li>
+                                            {% endfor %}
+                                        {% else %}
+                                            <li class="list-group-item bg-transparent px-0 text-success"><i class="bi bi-check2-circle me-2"></i>No hidden data or executables detected.</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- Analyze Again Button -->
+                    <div class="card-footer bg-transparent border-top pt-4">
+                        <a href="?tab={{ active_tab }}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-repeat me-2"></i>Analyze Another
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+
+            <!-- Tab Panes -->
+            <div class="tab-content" id="dashboardTabsContent">
+                {% if active_tab == 'file' %}
+                    {% if not show_result or results.type != 'file' %}
+                <!-- File Analysis Form -->
+                <div class="tab-pane fade show active" id="nav-file" role="tabpanel" tabindex="0">
+                    <div class="sam-card p-4 p-md-5 text-center">
+                        <div class="mx-auto mb-4" style="width: 80px; height: 80px; background: rgba(60, 145, 230, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--light-blue);">
+                            <i class="bi bi-file-earmark-binary fs-1"></i>
+                        </div>
+                        <h3 class="fw-bold" style="color: var(--dark-blue);">Executable & File Analysis</h3>
+                        <p class="text-muted mb-5">Identify embedded malwares, extract hidden strings, and analyze PE structures safely.</p>
+                        
+                        <form method="POST" enctype="multipart/form-data" class="mx-auto" style="max-width: 600px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="file_upload" value="1">
+                            
+                            <div class="upload-zone mb-4" id="drop-zone">
+                                <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                                <h5 class="fw-bold mb-2">Drag & Drop your file here</h5>
+                                <p class="text-muted small mb-0">or click to browse from your computer</p>
+                                <p class="text-muted small mt-2">Supports: .exe, .apk, .pdf, scripts, etc. (Max 50MB)</p>
+                                <input type="file" name="file" id="file-input" required>
+                            </div>
+                            <div id="file-name-display" class="fw-bold text-success mb-3" style="display: none;"></div>
+                            
+                            <button type="submit" class="btn btn-sam btn-lg w-100"><i class="bi bi-search me-2"></i>Analyze File</button>
+                        </form>
+                    </div>
+                </div>
+                    {% endif %}
+                {% endif %}
+
+                {% if active_tab == 'url' %}
+                    {% if not show_result or results.type != 'url' %}
+                <!-- URL Analysis Form -->
+                <div class="tab-pane fade show active" id="nav-url" role="tabpanel" tabindex="0">
+                    <div class="sam-card p-4 p-md-5 text-center">
+                        <div class="mx-auto mb-4" style="width: 80px; height: 80px; background: rgba(0, 198, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--cyan-glow);">
+                            <i class="bi bi-link-45deg fs-1"></i>
+                        </div>
+                        <h3 class="fw-bold" style="color: var(--dark-blue);">URL & Link Scanner</h3>
+                        <p class="text-muted mb-5">Detect suspicious IP links, phishing attempts, and hidden executable downloads.</p>
+                        
+                        <form method="POST" class="mx-auto" style="max-width: 600px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="url_scan" value="1">
+                            <div class="input-group input-group-lg mb-4 shadow-sm rounded-3">
+                                <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-globe"></i></span>
+                                <input type="url" name="url" class="form-control border-start-0 ps-0 form-control-lg" placeholder="https://suspicious-link.com" required>
+                            </div>
+                            <button type="submit" class="btn btn-sam btn-lg w-100"><i class="bi bi-shield-check me-2"></i>Scan URL</button>
+                        </form>
+                    </div>
+                </div>
+                    {% endif %}
+                {% endif %}
+                
+                <!-- Image Analysis Form -->
+                {% if active_tab == 'image' %}
+                    {% if not show_result or results.type != 'image' %}
+                <div class="tab-pane fade show active" id="nav-image" role="tabpanel" tabindex="0">
+                    <div class="sam-card p-4 p-md-5 text-center">
+                        <div class="mx-auto mb-4" style="width: 80px; height: 80px; background: rgba(46, 204, 113, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--success);">
+                            <i class="bi bi-image fs-1"></i>
+                        </div>
+                        <h3 class="fw-bold" style="color: var(--dark-blue);">Steganography Detection</h3>
+                        <p class="text-muted mb-5">Find hidden data streams and embedded payloads inside seemingly normal images.</p>
+                        
+                        <form method="POST" enctype="multipart/form-data" class="mx-auto" style="max-width: 600px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="image_upload" value="1">
+                            <div class="upload-zone mb-4">
+                                <i class="bi bi-image upload-icon" style="color: var(--success);"></i>
+                                <h5 class="fw-bold mb-2">Upload Image File</h5>
+                                <p class="text-muted small mb-0">Supports: .jpg, .png, .bmp, .gif</p>
+                                <input type="file" name="image" accept="image/*" required onchange="document.getElementById('img-name').innerText = this.files[0].name; document.getElementById('img-name').style.display = 'block';">
+                            </div>
+                            <div id="img-name" class="fw-bold text-success mb-3" style="display: none;"></div>
+                            
+                            <button type="submit" class="btn btn-sam btn-lg w-100"><i class="bi bi-search me-2"></i>Analyze Image</button>
+                        </form>
+                    </div>
+                </div>
+                    {% endif %}
+                {% endif %}
+                
+                {% if active_tab == 'history' %}
+                <!-- Scan History -->
+                <div class="tab-pane fade show active" id="nav-history" role="tabpanel" tabindex="0">
+                    <div class="sam-card">
+                        <h4 class="card-header pb-3 border-0">Recent Scans</h4>
+                        <ul class="list-group list-group-flush">
+                            {% for scan in history %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ scan.scan_type|title }}</strong> - {{ scan.input_data }}
+                                    <span class="badge bg-secondary ms-2">{{ scan.result }}</span>
+                                    <span class="badge risk-{{ scan.risk|lower }} ms-1">{{ scan.risk }}</span>
+                                    <span class="badge bg-info text-white ms-1">{% if scan.created_by %}{{ scan.created_by.username }}{% else %}SAM Tool{% endif %}</span>
+                                </div>
+                                <small class="text-muted">{{ scan.created_at|date:"M d, H:i" }}</small>
+                            </li>
+                            {% empty %}
+                            <li class="list-group-item text-center text-muted">No recent scans found.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Handle drag over styling
+        const dropZones = document.querySelectorAll('.upload-zone');
+        dropZones.forEach(zone => {
+            const input = zone.querySelector('input[type="file"]');
+            
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('dragover');
+            });
+            zone.addEventListener('drop', () => {
+                zone.classList.remove('dragover');
+            });
+            
+            // Name display toggle
+            if(input) {
+                input.addEventListener('change', function() {
+                    const displayId = this.id === 'file-input' ? 'file-name-display' : 'img-name';
+                    const display = document.getElementById(displayId);
+                    if(this.files && this.files.length > 0) {
+                        if(display) {
+                            display.innerHTML = `<i class="bi bi-file-earmark-check me-2"></i> Selected: ${this.files[0].name}`;
+                            display.style.display = 'block';
+                        }
+                    }
+                });
+            }
+        });
+
+        // No JS-driven tab switching: server decides current tab via active_tab
+        // Keep the drag-and-drop behavior and file name display only
+        const resultsPanel = document.getElementById('result-section');
+        if(resultsPanel) {
+            resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+</script>
+{% endblock %}

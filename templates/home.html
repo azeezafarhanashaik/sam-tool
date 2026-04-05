@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="row align-items-center min-vh-50">
+            <div class="col-lg-7 text-start mb-5 mb-lg-0">
+                <h1 class="display-3 fw-bold mb-3" style="color: var(--dark-blue);">SAM Tool</h1>
+                <h2 class="h4 mb-4" style="color: var(--light-blue);">Static Analysis for Malware</h2>
+                <p class="lead mb-5" style="color: var(--text-dark);"><em>"Safe Detection Without Execution"</em></p>
+                
+                <div class="d-flex justify-content-start gap-3 flex-wrap">
+                    <a href="{% url 'dashboard' %}?tab=file" class="btn btn-sam btn-lg shadow-lg px-4 py-3"><i class="bi bi-file-earmark-arrow-up me-2"></i>Upload File</a>
+                    <a href="{% url 'dashboard' %}?tab=url" class="btn btn-outline-sam btn-lg px-4 py-3"><i class="bi bi-globe me-2"></i>Analyze URL</a>
+                </div>
+            </div>
+            <div class="col-lg-5 text-center text-lg-end">
+                {% load static %}
+                <img src="{% static 'images/logo.png' %}" alt="SAM Logo" class="img-fluid" style="max-height: 350px;" onerror="this.style.display='none'">
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container py-4">
+        <h3 class="text-center fw-bold mb-5" style="color: var(--dark-blue);">Core Features</h3>
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="sam-card text-center p-4">
+                    <div class="feature-icon mx-auto"><i class="bi bi-shield-check"></i></div>
+                    <h5 class="fw-bold">Static Analysis</h5>
+                    <p class="text-muted small mb-0">Deep inspection of executables without detonation to find potential threats.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="sam-card text-center p-4">
+                    <div class="feature-icon mx-auto"><i class="bi bi-link-45deg"></i></div>
+                    <h5 class="fw-bold">URL Detection</h5>
+                    <p class="text-muted small mb-0">Identify malicious links, phishing domains, and hidden IP redirects.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="sam-card text-center p-4">
+                    <div class="feature-icon mx-auto"><i class="bi bi-file-earmark-text"></i></div>
+                    <h5 class="fw-bold">Metadata Extraction</h5>
+                    <p class="text-muted small mb-0">Uncover hidden file origins, compilation timestamps, and basic info.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="sam-card text-center p-4">
+                    <div class="feature-icon mx-auto"><i class="bi bi-image"></i></div>
+                    <h5 class="fw-bold">Steganography</h5>
+                    <p class="text-muted small mb-0">Detect hidden payloads or embedded executable signatures inside images.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5" style="background-color: white;">
+    <div class="container py-4">
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <h3 class="fw-bold" style="color: var(--dark-blue);">How It Works</h3>
+                <p class="lead text-muted mb-4">A simple 3-step process to secure your environment.</p>
+                
+                <div class="d-flex mb-4">
+                    <div class="me-3">
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: var(--light-blue); font-weight: bold;">1</div>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-1">Upload or Enter Target</h5>
+                        <p class="text-muted mb-0">Provide the suspicous file, image, or URL you wish to analyze.</p>
+                    </div>
+                </div>
+                
+                <div class="d-flex mb-4">
+                    <div class="me-3">
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: var(--light-blue); font-weight: bold;">2</div>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-1">Safe Analysis</h5>
+                        <p class="text-muted mb-0">Our engine dissects the target statically without running it, ensuring your system remains safe.</p>
+                    </div>
+                </div>
+                
+                <div class="d-flex">
+                    <div class="me-3">
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: var(--light-blue); font-weight: bold;">3</div>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-1">Review Results</h5>
+                        <p class="text-muted mb-0">Instantly view comprehensive reports highlighting malicious indicators like entropy or bad APIs.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 text-center">
+                <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=600" alt="Cyber Security" class="img-fluid rounded-4 shadow-lg">
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

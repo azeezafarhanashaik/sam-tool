@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+db.sqlite3
+
+# Environment
+.env
+
+# Media / Uploads
+media/
+uploads/
+
+# Large files
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.crdownload
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
